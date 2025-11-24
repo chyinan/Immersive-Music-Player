@@ -1490,6 +1490,24 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
+
+    // === NEW: Ctrl + Wheel Zoom Support ===
+    let zoomLevel = parseFloat(localStorage.getItem('pageZoomLevel')) || 1.0;
+    // Apply saved zoom level on startup
+    document.body.style.zoom = zoomLevel;
+
+    window.addEventListener('wheel', (e) => {
+        if (e.ctrlKey) {
+            e.preventDefault();
+            const delta = e.deltaY > 0 ? -0.1 : 0.1;
+            zoomLevel = Math.min(Math.max(0.5, zoomLevel + delta), 3.0);
+            // Round to 1 decimal place to avoid floating point weirdness
+            zoomLevel = Math.round(zoomLevel * 10) / 10;
+            
+            document.body.style.zoom = zoomLevel;
+            localStorage.setItem('pageZoomLevel', zoomLevel.toString());
+        }
+    }, { passive: false });
 });
 
 // === NEW: Localized Font Name Mapping ===
