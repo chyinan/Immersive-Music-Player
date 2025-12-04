@@ -71,6 +71,7 @@ const customBgVideoBtn = document.getElementById('custom-bg-video-btn');
 const clearCustomBgBtn = document.getElementById('clear-custom-bg-btn');
 const customBgContainer = document.getElementById('custom-bg-container');
 const albumArtBgToggle = document.getElementById('album-art-bg-toggle');
+const playerCardBgToggle = document.getElementById('player-card-bg-toggle');
 const bgBlurRange = document.getElementById('bg-blur-range');
 
 /**
@@ -102,6 +103,7 @@ let currentLyricIndex = -1;
 // State for lyrics display mode
 // 0: off, 1: translation only, 2: bilingual (orig/trans), 3: bilingual-reversed (trans/orig), 4: original only, 5: text only, 6: text only (reversed)
 let lyricsDisplayMode = 0;
+let currentDominantColorRGB = null; // Store dominant color for player card background
 
 // === NEW: Settings and Font Management (Refactored) ===
 
@@ -425,6 +427,12 @@ function setupSettings() {
         updateBackgrounds();
     });
 
+    playerCardBgToggle.addEventListener('change', () => {
+        const isEnabled = playerCardBgToggle.checked;
+        localStorage.setItem('playerCardBgEnabled', isEnabled ? '1' : '0');
+        updateBackgrounds();
+    });
+
 
     loadAndPopulateFonts();
 
@@ -480,6 +488,9 @@ function setupSettings() {
     const savedAlbumArtBgEnabled = localStorage.getItem('albumArtBgEnabled') !== '0'; // Default to true
     albumArtBgToggle.checked = savedAlbumArtBgEnabled;
 
+    const savedPlayerCardBgEnabled = localStorage.getItem('playerCardBgEnabled') !== '0'; // Default to true
+    playerCardBgToggle.checked = savedPlayerCardBgEnabled;
+
     // Restore custom background (path only)
     const savedBgPath = localStorage.getItem('customBgPath');
     if (savedBgPath) {
@@ -504,11 +515,23 @@ function updateBackgrounds() {
     // Rule 1: Control the custom background selector UI
     customBgContainer.classList.toggle('disabled', useAlbumArtBg);
 
-    // Rule 2: Determine player's distorted background (always album art if available)
+    // Rule 2: Determine player's distorted background
     if (artworkUrl) {
-        distortedBg.style.backgroundImage = `url(${artworkUrl})`;
+        if (playerCardBgToggle.checked) {
+            distortedBg.style.backgroundImage = `url(${artworkUrl})`;
+            distortedBg.style.backgroundColor = '';
+        } else {
+            distortedBg.style.backgroundImage = 'none';
+            if (currentDominantColorRGB) {
+                const { r, g, b } = currentDominantColorRGB;
+                distortedBg.style.backgroundColor = `rgba(${r}, ${g}, ${b}, 0.8)`;
+            } else {
+                distortedBg.style.backgroundColor = 'rgba(100, 100, 100, 0.5)';
+            }
+        }
     } else {
         distortedBg.style.backgroundImage = 'none';
+        distortedBg.style.backgroundColor = '';
     }
 
     // Rule 3: Determine the main, bottom-layer background
@@ -674,31 +697,41 @@ function clearCustomBackground() {
     }
 
     function analyzeImageAndApplyColors(imageUrl) {
-        analyzeImage(imageUrl).then((info) => {
+        return analyzeImage(imageUrl).then((info) => {
             if (!info) {
-                // Fallback to white if analysis fails
-                return applyAdaptiveColors({ text: '#ffffff' });
+                currentDominantColorRGB = null;
+                updateBackgrounds();
+                // Fallback to white if analysis fails AND adaptive color is enabled
+                if (adaptiveColorToggle.checked) {
+                    applyAdaptiveColors({ text: '#ffffff' });
+                }
+                return;
             }
             
             const { r, g, b, luminance } = info;
+            currentDominantColorRGB = { r, g, b };
+            updateBackgrounds(); // Apply color to player card if needed
     
-            // If the bottom half is dark (luminance < 140), use white text.
-            // The threshold was increased from 128 to 140 to be more sensitive
-            // to darker backgrounds, ensuring white text is used more appropriately.
-            if (luminance < 140) {
-                applyAdaptiveColors({ text: '#ffffff' }); // Uses white text
-            } else {
-                // If the bottom half is light, find a contrasting dark color.
-                const { h, s, l } = rgbToHsl(r, g, b);
-                if (s < 0.2) {
-                    // For low saturation colors (grays), just use a dark gray.
-                    applyAdaptiveColors({ text: '#222222' });
+            // Only apply text color if adaptive toggle is checked
+            if (adaptiveColorToggle.checked) {
+                // If the bottom half is dark (luminance < 140), use white text.
+                // The threshold was increased from 128 to 140 to be more sensitive
+                // to darker backgrounds, ensuring white text is used more appropriately.
+                if (luminance < 140) {
+                    applyAdaptiveColors({ text: '#ffffff' }); // Uses white text
                 } else {
-                    // For saturated colors, make it much darker.
-                    const newL = Math.max(0, l - 0.45);
-                    const { r: dr, g: dg, b: db } = hslToRgb(h, s, newL);
-                    const textColor = `rgb(${dr},${dg},${db})`;
-                    applyAdaptiveColors({ text: textColor });
+                    // If the bottom half is light, find a contrasting dark color.
+                    const { h, s, l } = rgbToHsl(r, g, b);
+                    if (s < 0.2) {
+                        // For low saturation colors (grays), just use a dark gray.
+                        applyAdaptiveColors({ text: '#222222' });
+                    } else {
+                        // For saturated colors, make it much darker.
+                        const newL = Math.max(0, l - 0.45);
+                        const { r: dr, g: dg, b: db } = hslToRgb(h, s, newL);
+                        const textColor = `rgb(${dr},${dg},${db})`;
+                        applyAdaptiveColors({ text: textColor });
+                    }
                 }
             }
         });
@@ -765,12 +798,12 @@ async function handleFile(filePath) {
             artworkUrl = `data:${mimeType};base64,${result.albumArtBase64}`;
             albumArt.src = artworkUrl;
             albumArt.style.display = 'block';
-            // 根据用户设置决定是否启用自适应颜色分析
-            if (adaptiveColorToggle.checked) {
-                // 自适应颜色已启用，分析封面颜色并应用
-                analyzeImageAndApplyColors(artworkUrl);
-            } else {
-                // 使用自定义颜色，重新应用
+            
+            // Always analyze image to get dominant color for background
+            analyzeImageAndApplyColors(artworkUrl);
+
+            // If adaptive color is disabled, ensure custom color is applied
+            if (!adaptiveColorToggle.checked) {
                 updateAdaptiveColors();
             }
         } else {
@@ -1006,6 +1039,7 @@ function resetPlayerUI() {
         // data URLs don't need revoking
         artworkUrl = null;
     }
+    currentDominantColorRGB = null;
     albumArt.src = '';
     albumArt.style.display = 'none';
 
