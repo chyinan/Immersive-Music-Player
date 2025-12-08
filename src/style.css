@@ -326,6 +326,8 @@ body:has(#player-ui-glass.minimal-mode) #background-blur {
 }
 
 .settings-panel select {
+    /* Hide the original select when custom select is active, 
+       but keep basic styles if custom select fails to load */
     background: #333;
     color: var(--primary-text-color);
     border: 1px solid #555;
@@ -333,6 +335,146 @@ body:has(#player-ui-glass.minimal-mode) #background-blur {
     padding: 0.3rem 0.5rem;
     width: 180px; /* Adjust as needed */
 }
+
+/* === Custom Select Styles === */
+
+/* Container for the custom select component */
+.custom-select-container {
+    position: relative;
+    width: 180px; /* Match original select width */
+    font-family: var(--font-interface);
+    font-size: 0.9rem;
+    user-select: none;
+}
+
+/* The trigger button that shows the selected value */
+.custom-select-trigger {
+    background-color: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 4px;
+    color: var(--primary-text-color);
+    padding: 0.3rem 0.6rem;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: all 0.2s ease;
+    min-height: 28px;
+}
+
+.custom-select-trigger:hover {
+    background-color: rgba(255, 255, 255, 0.15);
+    border-color: rgba(255, 255, 255, 0.4);
+}
+
+/* The arrow icon */
+.custom-select-arrow {
+    font-size: 0.7rem;
+    margin-left: 8px;
+    transition: transform 0.3s ease;
+    opacity: 0.7;
+}
+
+/* Rotate arrow when open */
+.custom-select-container.open .custom-select-arrow {
+    transform: rotate(180deg);
+}
+
+/* The dropdown list container */
+.custom-options {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    margin-top: 4px;
+    background: rgba(30, 30, 30, 0.95);
+    backdrop-filter: blur(15px);
+    -webkit-backdrop-filter: blur(15px);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 6px;
+    z-index: 2000;
+    max-height: 300px;
+    overflow-y: auto;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-10px);
+    transition: all 0.25s cubic-bezier(0.25, 0.1, 0.25, 1);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.5);
+}
+
+/* Open state for dropdown */
+.custom-select-container.open .custom-options {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+}
+
+/* Scrollbar styling for options */
+.custom-options::-webkit-scrollbar {
+    width: 6px;
+}
+.custom-options::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 0 6px 6px 0;
+}
+.custom-options::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 3px;
+}
+.custom-options::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.3);
+}
+
+/* Option groups styling */
+.custom-optgroup-label {
+    padding: 0.4rem 0.6rem;
+    font-size: 0.75rem;
+    color: var(--secondary-text-color);
+    font-weight: 600;
+    background: rgba(255, 255, 255, 0.05);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    backdrop-filter: blur(5px);
+}
+
+/* Individual option styling */
+.custom-option {
+    padding: 0.5rem 0.8rem;
+    cursor: pointer;
+    transition: background-color 0.15s;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+    font-size: 0.95rem; /* Slightly larger for readability */
+    color: rgba(255, 255, 255, 0.85);
+}
+
+.custom-option:last-child {
+    border-bottom: none;
+}
+
+.custom-option:hover {
+    background-color: rgba(255, 255, 255, 0.15);
+    color: #fff;
+}
+
+.custom-option.selected {
+    background-color: rgba(255, 255, 255, 0.1);
+    color: var(--accent-color);
+    font-weight: 500;
+    position: relative;
+}
+
+/* Add a checkmark for selected option */
+.custom-option.selected::after {
+    content: "✓";
+    position: absolute;
+    right: 0.8rem;
+    font-size: 0.8rem;
+}
+
 
 /* === NEW: Glassmorphism Inputs === */
 

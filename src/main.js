@@ -290,6 +290,11 @@ async function loadAndPopulateFonts() {
             }
         }
 
+        // NEW: Setup custom select UI after everything is populated and restored
+        [fontChineseSelect, fontJapaneseSelect, fontEnglishSelect, fontInterfaceSelect].forEach(sel => {
+            setupCustomSelect(sel);
+        });
+
     } catch (error) {
         console.error("Failed to load system fonts:", error);
     }
@@ -1647,4 +1652,137 @@ function getLocalizedFontName(name) {
         return autoJapaneseName(name);
     }
     return name;
+}
+
+// === NEW: Custom Select Implementation ===
+function setupCustomSelect(originalSelect) {
+    // 1. Remove existing custom select if any
+    const existingContainer = originalSelect.nextElementSibling;
+    if (existingContainer && existingContainer.classList.contains('custom-select-container')) {
+        existingContainer.remove();
+    }
+
+    // 2. Create Container
+    const container = document.createElement('div');
+    container.className = 'custom-select-container';
+
+    // 3. Create Trigger
+    const trigger = document.createElement('div');
+    trigger.className = 'custom-select-trigger';
+    
+    // Initial Text
+    // Note: Use .value to find the selected option because .selected might not be reliable after dynamic changes
+    let selectedOption = null;
+    if (originalSelect.value) {
+        selectedOption = Array.from(originalSelect.options).find(opt => opt.value === originalSelect.value);
+    }
+    // Fallback to first option or "默认"
+    if (!selectedOption) selectedOption = originalSelect.options[0];
+    
+    const initialText = selectedOption ? selectedOption.textContent : '默认';
+    
+    const textSpan = document.createElement('span');
+    textSpan.textContent = initialText;
+    textSpan.style.whiteSpace = 'nowrap';
+    textSpan.style.overflow = 'hidden';
+    textSpan.style.textOverflow = 'ellipsis';
+    
+    const arrow = document.createElement('span');
+    arrow.className = 'custom-select-arrow';
+    arrow.innerHTML = '&#9662;'; // Down arrow character
+
+    trigger.appendChild(textSpan);
+    trigger.appendChild(arrow);
+    container.appendChild(trigger);
+
+    // 4. Create Options List
+    const optionsList = document.createElement('div');
+    optionsList.className = 'custom-options';
+
+    // 5. Populate Options
+    Array.from(originalSelect.children).forEach(child => {
+        if (child.tagName === 'OPTGROUP') {
+            const groupLabel = document.createElement('div');
+            groupLabel.className = 'custom-optgroup-label';
+            groupLabel.textContent = child.label;
+            optionsList.appendChild(groupLabel);
+
+            Array.from(child.children).forEach(opt => {
+                createCustomOption(opt, optionsList, textSpan, originalSelect, container);
+            });
+        } else if (child.tagName === 'OPTION') {
+            createCustomOption(child, optionsList, textSpan, originalSelect, container);
+        }
+    });
+
+    container.appendChild(optionsList);
+
+    // 6. Event Listeners
+    trigger.addEventListener('click', (e) => {
+        e.stopPropagation();
+        // Close other open selects
+        document.querySelectorAll('.custom-select-container.open').forEach(el => {
+            if (el !== container) el.classList.remove('open');
+        });
+        container.classList.toggle('open');
+        
+        // Scroll to selected option
+        if (container.classList.contains('open')) {
+             const selected = optionsList.querySelector('.custom-option.selected');
+             if (selected) {
+                 selected.scrollIntoView({ block: 'nearest' });
+             }
+        }
+    });
+
+    // Close when clicking outside
+    document.addEventListener('click', (e) => {
+        if (!container.contains(e.target)) {
+            container.classList.remove('open');
+        }
+    });
+
+    // 7. Insert into DOM
+    originalSelect.style.display = 'none'; // Hide original
+    originalSelect.parentNode.insertBefore(container, originalSelect.nextSibling);
+}
+
+function createCustomOption(optionEl, containerEl, triggerTextEl, originalSelect, wrapperEl) {
+    const customOption = document.createElement('div');
+    customOption.className = 'custom-option';
+    customOption.textContent = optionEl.textContent;
+    customOption.dataset.value = optionEl.value;
+    
+    // Copy font styles for preview
+    if (optionEl.style.fontFamily) {
+        customOption.style.fontFamily = optionEl.style.fontFamily;
+        customOption.style.fontSize = '1.1em'; // Make it slightly larger in list
+    }
+
+    // Check if selected based on value, not just attribute
+    if (originalSelect.value === optionEl.value) {
+        customOption.classList.add('selected');
+    }
+
+    customOption.addEventListener('click', (e) => {
+        e.stopPropagation();
+        
+        // Update Trigger Text
+        triggerTextEl.textContent = optionEl.textContent;
+
+        // Update Original Select
+        originalSelect.value = optionEl.value;
+        
+        // Trigger Change Event
+        originalSelect.dispatchEvent(new Event('change'));
+
+        // Update Selection UI
+        containerEl.querySelectorAll('.custom-option').forEach(el => el.classList.remove('selected'));
+        customOption.classList.add('selected');
+
+        // Close Dropdown
+        wrapperEl.classList.remove('open');
+    });
+
+    containerEl.appendChild(customOption);
 }
