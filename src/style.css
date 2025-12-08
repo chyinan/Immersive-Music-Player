@@ -205,6 +205,12 @@ body:has(#player-ui-glass.minimal-mode) #background-blur {
     transition: left 0.8s cubic-bezier(0.33, 1, 0.68, 1), opacity 0.5s ease-in-out;
 }
 
+/* 正常播放/封面卡片模式下轻微下移（不影响歌词模式与封面模式） */
+body:not(.lyrics-active):not(.cover-mode) .container {
+    top: 55%;
+    transform: translate(-50%, -50%);
+}
+
 /* --- Minimal Mode Container Override --- */
 .container:has(#player-ui-glass.minimal-mode) {
     max-width: 98vw; /* Allow more width for minimal mode */
@@ -621,10 +627,11 @@ input[type="file"] { display: none; }
     /* 与歌词模式保持一致的尺寸 */
     width: 40vw;
     max-width: 650px;
-    height: 75vh; /* 原 75vh，适当降低高度 */
-    max-height: 760px;
+    height: auto; /* 改为自适应，避免被压缩 */
+    min-height: 70vh;
+    max-height: none;
     border-radius: 24px;
-    overflow: hidden;
+    overflow: visible; /* 防止进度条被裁剪 */
     border: 1px solid rgba(255, 255, 255, 0.6); /* NEW: uniform white outline to hide stubborn edges */
     transition: width 0.7s cubic-bezier(0.45, 0.05, 0.55, 0.95), 
                 max-width 0.7s cubic-bezier(0.45, 0.05, 0.55, 0.95),
@@ -688,7 +695,7 @@ input[type="file"] { display: none; }
     gap: 1rem;
     text-align: center;
     min-height: 480px; /* Give panel a min-height for adaptive layout */
-    height: 100%; /* 填满新的 wrapper 高度，避免下方空隙 */
+    height: auto; /* 跟随 wrapper 自动撑开 */
     
     /* GPU优化 - REMOVED to fix rendering artifacts at corners */
     /* will-change: transform; */
@@ -701,8 +708,14 @@ input[type="file"] { display: none; }
 
 #visual-container {
     /* 与歌词模式保持一致的封面尺寸 */
-    width: clamp(350px, 30vw, 450px);
-    height: clamp(350px, 30vw, 450px);
+    /* width: clamp(350px, 30vw, 450px); */
+    /* height: clamp(350px, 30vw, 450px); */
+    /* NEW: Responsive sizing to prevent overflow in small windows */
+    width: 100%;
+    max-width: 450px;
+    height: auto;
+    aspect-ratio: 1/1;
+    
     position: relative;
     margin-top: 1rem;
     margin-bottom: 1rem;
@@ -1095,22 +1108,25 @@ body.lyrics-active #lyrics-container {
 
 /* NEW: When lyrics are active, move the entire player container to the left */
 body.lyrics-active .container {
-    /* transform: translate(calc(-50% - 23vw), -50%); */ /* Replaced with left property */
-    left: calc(50% - 23vw);
+    left: 50%;
+    transform: translate(calc(-50% - 23vw), -50%); /* 仅平移，不再改动尺寸 */
 }
 
 /* NEW: Enlarge the player itself when lyrics are active to fill the red box */
 body.lyrics-active #player-wrapper {
     width: 40vw; /* Make it significantly larger */
     max-width: 650px; /* And allow it to be large */
-    height: 75vh;
-    max-height: 760px; /* 强制保持与默认模式相同的最大高度 (原为 800px) */
+    height: auto; /* 改为自适应，让底部不被压缩 */
+    min-height: 75vh;
+    max-height: none; /* 移除上限，避免歌词模式压缩高度 */
     border-radius: 24px; /* 强制保持原有的圆角 (虽然默认就是24px，这里显式声明以防万一) */
+    overflow: visible; /* 保证进度条在任何模式都不会被裁剪 */
 }
 
 /* NEW: Make the glass UI fill the new wrapper height */
 body.lyrics-active #player-ui-glass {
-    height: 100%;
+    height: auto;
+    min-height: 100%;
     /* 进一步降低玻璃亮度，并微调滤镜以增强对比度 */
     background: rgba(255, 255, 255, 0.06);
     box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12);
@@ -1122,8 +1138,14 @@ body.lyrics-active #player-ui-glass {
 
 /* Enlarge Album Art */
 body.lyrics-active #visual-container {
-    width: clamp(350px, 30vw, 450px);
-    height: clamp(350px, 30vw, 450px);
+    /* width: clamp(350px, 30vw, 450px); */
+    /* height: clamp(350px, 30vw, 450px); */
+    /* NEW: Responsive sizing */
+    width: 100%;
+    max-width: 450px;
+    height: auto;
+    aspect-ratio: 1/1;
+    
     margin-top: 2rem;
     margin-bottom: 2rem;
 }
@@ -1611,6 +1633,9 @@ body.lyrics-mode-text-only-reversed .lyrics-line:has(.translated-lyric:empty) .o
 body.cover-mode .container {
     align-items: center;
     justify-content: center;
+    /* 进一步下移，让面板在封面模式中明显低一些 */
+    top: 50%;
+    transform: translate(-50%, -50%);
 }
 
 body.cover-mode #player-ui-distorted-bg {
@@ -1641,14 +1666,70 @@ body.cover-mode #player-ui-glass {
 body.cover-mode #visual-container {
     width: 100%;
     height: 100%;
+    max-width: none;
+    max-height: none;
+    aspect-ratio: auto; /* 覆盖 1:1，保持原始画面比例填充 */
     margin: 0;
     border-radius: 16px;
 }
 
 body.cover-mode #visual-container img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover; /* 保证铺满，不压缩 */
     border-radius: 16px;
 }
 
 body.cover-mode #info-wrapper {
     display: none;
+}
+
+/* --- NEW: Responsive Adjustments for Windowed Mode --- */
+@media (max-width: 1200px) {
+    #player-wrapper {
+        width: 50vw;
+    }
+    body.lyrics-active #player-wrapper {
+        width: 50vw;
+    }
+}
+
+@media (max-width: 900px) {
+    #player-wrapper {
+        width: 70vw;
+    }
+    body.lyrics-active #player-wrapper {
+        width: 70vw;
+    }
+}
+
+@media (max-width: 600px) {
+    #player-wrapper {
+        width: 90vw;
+    }
+    body.lyrics-active #player-wrapper {
+        width: 90vw;
+    }
+}
+
+/* NEW: Height-constrained window mode – anchor to top and let content grow downward */
+@media (max-height: 850px) {
+    .container {
+        top: 0;
+        left: 50%;
+        transform: translate(-50%, 0);
+        max-height: none;
+        padding: 1rem 0 2rem;
+    }
+    #player-wrapper,
+    body.lyrics-active #player-wrapper {
+        height: auto;
+        max-height: none;
+        min-height: 85vh;
+        overflow: visible; /* allow progress bar to show when content exceeds wrapper */
+    }
+    #player-ui-glass {
+        height: auto;
+        min-height: 100%;
+    }
 }
