@@ -1,0 +1,52 @@
+
+/* ... existing code ... */
+
+/* Word-by-word Lyrics Animation */
+.original-lyric.is-word-by-word {
+    /* Ensure flex or inline-block behavior if needed, but default is fine */
+}
+
+.word-char {
+    position: relative;
+    display: inline-block; /* Essential for transform/clip */
+    /* 默认状态：稍微暗淡 */
+    color: rgba(255, 255, 255, 0.4); 
+    /* 动态填充背景 */
+    background: linear-gradient(
+        90deg,
+        var(--accent-color) var(--glow-progress, 0%),
+        rgba(255, 255, 255, 0.4) var(--glow-progress, 0%)
+    );
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    
+    /* 简单的过渡，使进度更平滑 */
+    /* 注意：--glow-progress 是自定义属性，需要 @property 支持才能平滑过渡，
+       或者我们通过 JS 高频更新。JS requestAnimationFrame 更新通常足够平滑。 */
+    transition: color 0.2s ease;
+}
+
+/* 激活状态的高亮/发光 (可选) */
+.word-char.active {
+    /* 正在唱的字可以加一点外发光或者缩放 */
+    /* text-shadow: 0 0 10px var(--accent-color); */
+}
+
+.word-char.completed {
+    /* 唱完的字保持高亮 */
+    /* 不要移除 background 或更改 text-fill-color，以避免渲染闪烁 */
+    /* JS 会将 --glow-progress 设置为 100%，这就是我们要的效果 */
+    
+    /* 可选：如果需要更强的发光，可以使用 filter drop-shadow，
+       因为 text-shadow 对 transparent text 无效（它会显示在文字背后而不是轮廓外） */
+    /* filter: drop-shadow(0 0 5px var(--accent-color)); */
+}
+
+/* 为了支持渐变过渡，我们可以定义 @property (Chromium 85+) */
+@property --glow-progress {
+  syntax: '<percentage>';
+  inherits: false;
+  initial-value: 0%;
+}
+

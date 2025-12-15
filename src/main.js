@@ -1520,6 +1520,7 @@ function setupPlaylist() {
     
     // Audio Ended Event
     audioPlayer.addEventListener('ended', () => {
+        cancelAnimationFrame(animationFrameId);
         if (playlist.length > 0) {
             playNext(true);
         }
@@ -1528,10 +1529,12 @@ function setupPlaylist() {
     // === Button Auto-Hide Events ===
     audioPlayer.addEventListener('play', () => {
         startPlaylistBtnTimer();
+        loopLyricsAnimation();
     });
 
     audioPlayer.addEventListener('pause', () => {
         handleButtonInteraction(); // Show button on pause
+        cancelAnimationFrame(animationFrameId);
     });
 
     playlistBtn.addEventListener('mouseenter', handleButtonInteraction);
@@ -1542,6 +1545,26 @@ function setupPlaylist() {
             startPlaylistBtnTimer();
         }
     });
+}
+
+// === Lyrics Animation Loop ===
+let animationFrameId;
+
+function loopLyricsAnimation() {
+    if (audioPlayer.paused || audioPlayer.ended) {
+        cancelAnimationFrame(animationFrameId);
+        return;
+    }
+    
+    // Only update word-by-word progress if needed
+    if (lyricsDisplayMode !== 0 && parsedLyrics.length > 0 && currentLyricIndex !== -1) {
+        const line = parsedLyrics[currentLyricIndex];
+        if (line && line.isWordByWord) {
+             updateWordByWordProgress(audioPlayer.currentTime, currentLyricIndex);
+        }
+    }
+    
+    animationFrameId = requestAnimationFrame(loopLyricsAnimation);
 }
 
 function formatTime(seconds) {
@@ -1878,9 +1901,28 @@ function toggleLyrics() {
 function parseLRC(lrcText) {
     const lines = lrcText.split(/\r\n|\n|\r/);
     const timeRegex = /\[(\d{2}):(\d{2})[.:](\d{2,3})\]/;
+    // Regex for checking multiple timestamps (global)
+    const globalTimeRegex = /\[(\d{2}):(\d{2})[.:](\d{2,3})\]/g;
     const intermediate = [];
 
     for (const line of lines) {
+        // Check if line has multiple timestamps (indicating word-by-word)
+        const allMatches = [...line.matchAll(globalTimeRegex)];
+        
+        if (allMatches.length > 1) {
+            const wordData = parseWordByWordLine(line);
+            if (wordData) {
+                intermediate.push({
+                    time: wordData.startTime,
+                    text: wordData.fullText,
+                    isWordByWord: true,
+                    words: wordData.words
+                });
+                continue;
+            }
+        }
+
+        // Standard LRC parsing
         const match = line.match(timeRegex);
         if (match) {
             const minutes = parseInt(match[1], 10);
@@ -1889,7 +1931,7 @@ function parseLRC(lrcText) {
             const time = minutes * 60 + seconds + milliseconds / 1000;
             const text = line.replace(timeRegex, '').trim();
             if (text) {
-                intermediate.push({ time, text });
+                intermediate.push({ time, text, isWordByWord: false });
             }
         }
     }
@@ -1901,14 +1943,123 @@ function parseLRC(lrcText) {
         const current = intermediate[i];
         const next = i + 1 < intermediate.length ? intermediate[i + 1] : null;
 
-        if (next && next.time === current.time) {
-            finalLyrics.push({ time: current.time, text: current.text, translation: next.text });
-            i++; // 跳过下一行，因为它已经是翻译
+        // Translation logic: if next line has same time, treat as translation
+        if (next && Math.abs(next.time - current.time) < 0.01) {
+            // Note: If 'current' is word-by-word, 'next' (translation) usually isn't, 
+            // or if it is, we currently don't support word-by-word translation syncing yet 
+            // (plan said "Translation line keeps sentence-by-sentence").
+            // So we just take next.text as translation.
+            
+            finalLyrics.push({ 
+                time: current.time, 
+                text: current.text, 
+                translation: next.text,
+                isWordByWord: current.isWordByWord,
+                words: current.words
+            });
+            i++; // Skip next line
         } else {
-            finalLyrics.push({ time: current.time, text: current.text, translation: null });
+            finalLyrics.push({ 
+                time: current.time, 
+                text: current.text, 
+                translation: null,
+                isWordByWord: current.isWordByWord,
+                words: current.words
+            });
         }
     }
+    
+    // Post-process: Calculate duration for the last word in each word-by-word line
+    // based on the next line's start time (if available).
+    for (let i = 0; i < finalLyrics.length; i++) {
+        const current = finalLyrics[i];
+        if (current.isWordByWord && current.words.length > 0) {
+            const lastWord = current.words[current.words.length - 1];
+            // If last word duration is unset or just defaulted
+            // Try to cap it with next line time
+            const nextLine = i + 1 < finalLyrics.length ? finalLyrics[i+1] : null;
+            if (nextLine) {
+                // If the calculated end time exceeds next line start, trim it?
+                // Or just use next line start as the hard limit for the last word?
+                // The parser logic sets endTime based on next word. 
+                // For the very last word, we need a duration.
+                // Let's ensure it has *some* duration.
+                if (nextLine.time > lastWord.startTime) {
+                    lastWord.endTime = nextLine.time;
+                } else {
+                    // Fallback: +0.5s or +1s
+                    lastWord.endTime = lastWord.startTime + 1.0;
+                }
+            } else {
+                 // No next line, end of song
+                 lastWord.endTime = lastWord.startTime + 2.0; 
+            }
+        }
+    }
+
     return finalLyrics;
+}
+
+/**
+ * Parses a line with multiple timestamps into words
+ */
+function parseWordByWordLine(line) {
+    const timeRegex = /\[(\d{2}):(\d{2})[.:](\d{2,3})\]/g;
+    const matches = [...line.matchAll(timeRegex)];
+    if (matches.length === 0) return null;
+
+    const words = [];
+    let fullText = "";
+    
+    // First timestamp defines line start time
+    let lineStartTime = 0;
+
+    for (let i = 0; i < matches.length; i++) {
+        const match = matches[i];
+        const minutes = parseInt(match[1], 10);
+        const seconds = parseInt(match[2], 10);
+        const milliseconds = parseInt(match[3].padEnd(3, '0'), 10);
+        const startTime = minutes * 60 + seconds + milliseconds / 1000;
+        
+        if (i === 0) lineStartTime = startTime;
+
+        // Content is between current match end and next match start (or line end)
+        const startIdx = match.index + match[0].length;
+        const endIdx = i < matches.length - 1 ? matches[i+1].index : line.length;
+        const text = line.substring(startIdx, endIdx);
+        
+        // Even if text is empty, we record it (could be spacing or just time anchor)
+        // But for display, empty text spans might be invisible. 
+        // We will filter or handle empty strings in renderer? 
+        // Better to keep them for timing continuity.
+        
+        fullText += text;
+
+        // Determine end time
+        let endTime;
+        if (i < matches.length - 1) {
+            const nextMatch = matches[i+1];
+            const nMin = parseInt(nextMatch[1], 10);
+            const nSec = parseInt(nextMatch[2], 10);
+            const nMs = parseInt(nextMatch[3].padEnd(3, '0'), 10);
+            endTime = nMin * 60 + nSec + nMs / 1000;
+        } else {
+            // Placeholder, will be fixed in post-process
+            endTime = startTime + 0.5; 
+        }
+
+        words.push({
+            text,
+            startTime,
+            endTime
+        });
+    }
+
+    return {
+        startTime: lineStartTime,
+        fullText: fullText.trim(), // Trim full text for cleaner display if it has bounding spaces
+        words
+    };
 }
 
 /**
@@ -2079,6 +2230,45 @@ function updateLyrics(currentTime, forceRecalc = false) {
         // Update cover mode display
         updateCoverModeLyrics();
     }
+    
+    // NEW: Always update word-by-word progress if the current line is word-by-word
+    // even if the line index hasn't changed.
+    if (isActive && parsedLyrics[currentLyricIndex]?.isWordByWord) {
+        updateWordByWordProgress(currentTime, currentLyricIndex);
+    }
+}
+
+/**
+ * Updates the gradient progress for word-by-word lyrics
+ */
+function updateWordByWordProgress(currentTime, lineIndex) {
+    const lineEl = lyricsLinesContainer.querySelector(`.lyrics-line[data-abs-index="${lineIndex}"]`);
+    if (!lineEl) return;
+
+    const words = lineEl.querySelectorAll('.word-char');
+    words.forEach(word => {
+        const start = parseFloat(word.dataset.start);
+        const end = parseFloat(word.dataset.end);
+        
+        if (currentTime >= end) {
+            // Already sung
+            word.style.setProperty('--glow-progress', '100%');
+            word.classList.add('completed');
+            word.classList.remove('active');
+        } else if (currentTime < start) {
+            // Not yet sung
+            word.style.setProperty('--glow-progress', '0%');
+            word.classList.remove('completed', 'active');
+        } else {
+            // Currently singing
+            const progress = (currentTime - start) / (end - start);
+            const percentage = Math.min(100, Math.max(0, progress * 100));
+            
+            word.style.setProperty('--glow-progress', `${percentage}%`);
+            word.classList.add('active');
+            word.classList.remove('completed');
+        }
+    });
 }
 
 /** NEW utility function to avoid code repetition */
@@ -2113,12 +2303,8 @@ function renderAllLyricsOnce() {
         const originalSpan = document.createElement('span');
         originalSpan.className = 'original-lyric';
         
-        // FIX: Reverted to using `line.text` and added a fallback for empty lines.
         let originalText = line.text || '';
-        // NEW: Auto-replace problematic glyphs for meta lines
         originalText = fixProblemGlyphs(originalText);
-        // REMOVED: The confusing and ineffective meta-regex check block is gone.
-        // The logic for determining "hasTranslation" is now correctly handled in toggleLyrics.
         
         const langCode = franc(originalText, { minLength: 1 });
         if (langCode === 'cmn' || langCode === 'nan') {
@@ -2129,9 +2315,45 @@ function renderAllLyricsOnce() {
             originalSpan.lang = 'en';
         }
 
-        originalSpan.innerHTML = wrapEnglish(originalText);
+        if (line.isWordByWord && line.words && line.words.length > 0) {
+            // Render word-by-word structure
+            // We use wrapEnglish logic per word/segment if needed, or just plain text
+            // Ideally, we keep the wrapEnglish for latin parts even inside words?
+            // For simplicity and to avoid nested span chaos with animation,
+            // we will just render the words as spans.
+            // If the word contains mixed latin/non-latin, we might lose the font benefit of wrapEnglish 
+            // unless we parse inside. 
+            // Let's iterate words.
+            
+            line.words.forEach(word => {
+                const wSpan = document.createElement('span');
+                wSpan.className = 'word-char';
+                wSpan.dataset.start = word.startTime;
+                wSpan.dataset.end = word.endTime;
+                wSpan.textContent = word.text; 
+                // Note: fixProblemGlyphs is already done on full text, but words are raw.
+                // We should probably apply it to words too if they match? 
+                // Actually parseWordByWordLine extracts raw text.
+                // Let's just assume words are fine or apply fix if needed.
+                wSpan.textContent = fixProblemGlyphs(word.text);
+                
+                // If we want font fallback for latin inside word-by-word:
+                // It gets complicated because .word-char needs to be the specific target for animation.
+                // If we nest .latin inside .word-char, it should be fine.
+                wSpan.innerHTML = wrapEnglish(fixProblemGlyphs(word.text));
+                
+                originalSpan.appendChild(wSpan);
+            });
+            // Mark the line or span as having word-by-word content for CSS if needed
+            originalSpan.classList.add('is-word-by-word');
+            
+        } else {
+            // Standard line render
+            originalSpan.innerHTML = wrapEnglish(originalText);
+        }
 
         li.appendChild(originalSpan);
+        
         const translationSpan = document.createElement('span');
         translationSpan.className = 'translated-lyric';
         translationSpan.lang = 'zh-CN';
