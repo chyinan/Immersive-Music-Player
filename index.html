@@ -22,6 +22,7 @@
     </svg>
 
     <div id="background-blur"></div>
+    <canvas id="background-silk"></canvas>
     <!-- NEW: Video element for dynamic background -->
     <video id="background-video" autoplay muted loop playsinline></video>
 
@@ -112,12 +113,19 @@
             <input type="range" id="text-opacity-range" min="0" max="100" value="100">
         </div>
         <div class="setting-item">
-            <label for="text-shadow-toggle">文本阴影:</label>
+            <label for="text-shadow-toggle">歌曲信息文本阴影:</label>
             <input type="checkbox" id="text-shadow-toggle">
         </div>
 
         <!-- Appearance Settings -->
         <div class="settings-group-title">外观</div>
+        <div class="setting-item" id="bg-mode-container">
+            <label>背景模式:</label>
+            <select id="bg-mode-select">
+                <option value="static">静态模糊</option>
+                <option value="silk">流动丝绸</option>
+            </select>
+        </div>
         <div class="setting-item">
             <label for="album-art-bg-toggle">专辑封面背景:</label>
             <input type="checkbox" id="album-art-bg-toggle" checked>
@@ -162,6 +170,10 @@
         <div class="setting-item">
             <label for="lyrics-opacity-range">歌词不透明度:</label>
             <input type="range" id="lyrics-opacity-range" min="0" max="100" value="100">
+        </div>
+        <div class="setting-item">
+            <label for="lyrics-text-shadow-toggle">歌词文本阴影:</label>
+            <input type="checkbox" id="lyrics-text-shadow-toggle">
         </div>
     </div>
 

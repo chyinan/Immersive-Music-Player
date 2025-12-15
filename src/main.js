@@ -7,6 +7,9 @@ import { open as openInBrowser } from '@tauri-apps/plugin-shell';
 // 引入语言识别库
 import { franc } from 'franc';
 
+import { SilkBackground } from './silk-background.js';
+import { getDominantColors } from './color-utils.js';
+
 // ===== DOM ELEMENTS =====
 
 // Main Layout Elements
@@ -21,6 +24,10 @@ const loadingOverlay = document.getElementById('loadingOverlay');
 // Background Elements
 const backgroundBlur = document.getElementById('background-blur');
 const backgroundVideo = document.getElementById('background-video');
+const backgroundSilkCanvas = document.getElementById('background-silk');
+const bgModeSelect = document.getElementById('bg-mode-select'); // NEW
+const bgModeContainer = document.getElementById('bg-mode-container'); // NEW
+const silkBg = new SilkBackground('background-silk'); // Initialize Silk BG
 
 // Audio Player Elements
 const audioPlayer = document.getElementById('audioPlayer');
@@ -68,6 +75,7 @@ const boldTranslationToggle = document.getElementById('bold-translation-toggle')
 const italicOriginalToggle = document.getElementById('italic-original-toggle');
 const italicTranslationToggle = document.getElementById('italic-translation-toggle');
 const opacityRange = document.getElementById('lyrics-opacity-range');
+const lyricsTextShadowToggle = document.getElementById('lyrics-text-shadow-toggle');
 const textShadowToggle = document.getElementById('text-shadow-toggle');
 
 // Color Control Elements
@@ -115,6 +123,7 @@ let currentLyricIndex = -1;
 // 0: off, 1: translation only, 2: bilingual (orig/trans), 3: bilingual-reversed (trans/orig), 4: original only, 5: text only, 6: text only (reversed)
 let lyricsDisplayMode = 0;
 let currentDominantColorRGB = null; // Store dominant color for player card background
+let currentBgMode = 'static'; // 'static' or 'silk'
 
 // Playlist State
 let playlist = [];
@@ -307,12 +316,24 @@ function applyLyricsOpacity(value) {
 }
 
 /**
+ * Applies text shadow to lyrics based on the toggle's state.
+ * @param {boolean} isEnabled - Whether the shadow should be enabled.
+ */
+function applyLyricsTextShadow(isEnabled) {
+    // 使用较重的阴影以确保在各种背景下的可读性
+    const shadowStyle = isEnabled 
+        ? '0 2px 4px rgba(0, 0, 0, 0.8)' 
+        : 'none';
+    document.documentElement.style.setProperty('--lyrics-text-shadow', shadowStyle);
+}
+
+/**
  * Applies text shadow based on the toggle's state.
  * @param {boolean} isEnabled - Whether the shadow should be enabled.
  */
 function applyTextShadow(isEnabled) {
     const shadowStyle = isEnabled 
-        ? '0 1px 8px rgba(0, 0, 0, 0.7)' 
+        ? '0 2px 4px rgba(0, 0, 0, 0.8)' 
         : 'none';
     document.documentElement.style.setProperty('--adaptive-text-shadow', shadowStyle);
 }
@@ -500,6 +521,13 @@ function setupSettings() {
         applyLyricsOpacity(val);
     });
 
+    // NEW: Lyrics text shadow listener
+    lyricsTextShadowToggle.addEventListener('change', () => {
+        const isEnabled = lyricsTextShadowToggle.checked;
+        localStorage.setItem('lyricsTextShadowEnabled', isEnabled ? '1' : '0');
+        applyLyricsTextShadow(isEnabled);
+    });
+
     // NEW: Text shadow listener
     textShadowToggle.addEventListener('change', () => {
         const isEnabled = textShadowToggle.checked;
@@ -545,6 +573,25 @@ function setupSettings() {
         updateBackgrounds();
     });
 
+    // Background Mode Select Listener
+    if (bgModeSelect) {
+        bgModeSelect.addEventListener('change', (e) => {
+            currentBgMode = e.target.value;
+            localStorage.setItem('bgMode', currentBgMode);
+            updateBackgrounds();
+        });
+        
+        // Restore saved mode
+        const savedBgMode = localStorage.getItem('bgMode');
+        if (savedBgMode) {
+            currentBgMode = savedBgMode;
+            bgModeSelect.value = savedBgMode;
+        }
+        
+        // Init custom select for it if needed
+        setupCustomSelect(bgModeSelect);
+    }
+
     playerCardBgToggle.addEventListener('change', () => {
         const isEnabled = playerCardBgToggle.checked;
         localStorage.setItem('playerCardBgEnabled', isEnabled ? '1' : '0');
@@ -573,6 +620,11 @@ function setupSettings() {
         applyLyricsOpacity(savedOpacity);
     }
     
+    // NEW: Restore lyrics text shadow setting
+    const savedLyricsTextShadow = localStorage.getItem('lyricsTextShadowEnabled') === '1';
+    lyricsTextShadowToggle.checked = savedLyricsTextShadow;
+    applyLyricsTextShadow(savedLyricsTextShadow);
+
     // NEW: Restore text shadow setting
     const savedTextShadow = localStorage.getItem('textShadowEnabled') === '1';
     textShadowToggle.checked = savedTextShadow;
@@ -655,6 +707,29 @@ function updateBackgrounds() {
     // Rule 3: Determine the main, bottom-layer background
     let finalBgUrl = null;
     let finalVideoUrl = null;
+
+    // Handle Silk Mode
+    if (currentBgMode === 'silk') {
+        backgroundSilkCanvas.classList.add('active');
+        backgroundBlur.classList.add('hidden-by-mode');
+        backgroundVideo.classList.add('hidden-by-mode');
+        silkBg.start();
+        
+        // Extract colors if we have an image
+        if (albumArt.src && albumArt.src !== window.location.href) {
+            getDominantColors(albumArt).then(colors => {
+                silkBg.updateColors(colors);
+            });
+        }
+        
+        // Return early or continue if we want mixed modes (for now exclusive)
+        return; 
+    } else {
+        backgroundSilkCanvas.classList.remove('active');
+        backgroundBlur.classList.remove('hidden-by-mode');
+        backgroundVideo.classList.remove('hidden-by-mode');
+        silkBg.stop();
+    }
 
     if (useAlbumArtBg) {
         finalBgUrl = artworkUrl; // Use album art if toggle is on
