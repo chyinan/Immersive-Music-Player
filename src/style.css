@@ -2030,7 +2030,9 @@ body.cover-mode #info-wrapper {
     background: rgba(255, 255, 255, 0.2);
 }
 /* --- Silk Background --- */
-#background-silk {
+#background-silk,
+#background-ink,
+#background-caustics {
     position: fixed;
     top: 0;
     left: 0;
@@ -2043,7 +2045,9 @@ body.cover-mode #info-wrapper {
     pointer-events: none;
 }
 
-#background-silk.active {
+#background-silk.active,
+#background-ink.active,
+#background-caustics.active {
     opacity: 1;
 }
 

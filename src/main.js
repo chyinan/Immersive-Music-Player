@@ -8,6 +8,8 @@ import { open as openInBrowser } from '@tauri-apps/plugin-shell';
 import { franc } from 'franc';
 
 import { SilkBackground } from './silk-background.js';
+import { InkBackground } from './ink-background.js';
+import { CausticsBackground } from './caustics-background.js';
 import { getDominantColors } from './color-utils.js';
 
 // ===== DOM ELEMENTS =====
@@ -25,9 +27,13 @@ const loadingOverlay = document.getElementById('loadingOverlay');
 const backgroundBlur = document.getElementById('background-blur');
 const backgroundVideo = document.getElementById('background-video');
 const backgroundSilkCanvas = document.getElementById('background-silk');
+const backgroundInkCanvas = document.getElementById('background-ink');
+const backgroundCausticsCanvas = document.getElementById('background-caustics');
 const bgModeSelect = document.getElementById('bg-mode-select'); // NEW
 const bgModeContainer = document.getElementById('bg-mode-container'); // NEW
 const silkBg = new SilkBackground('background-silk'); // Initialize Silk BG
+const inkBg = new InkBackground('background-ink'); // Initialize Ink BG
+const causticsBg = new CausticsBackground('background-caustics'); // Initialize Caustics BG
 
 // Audio Player Elements
 const audioPlayer = document.getElementById('audioPlayer');
@@ -882,6 +888,11 @@ function updateBackgrounds() {
     // Handle Silk Mode
     if (currentBgMode === 'silk') {
         backgroundSilkCanvas.classList.add('active');
+        backgroundInkCanvas.classList.remove('active'); // Hide Ink
+        backgroundCausticsCanvas.classList.remove('active'); // Hide Caustics
+        inkBg.stop(); // Stop Ink
+        causticsBg.stop(); // Stop Caustics
+
         backgroundBlur.classList.add('hidden-by-mode');
         backgroundVideo.classList.add('hidden-by-mode');
         silkBg.start();
@@ -893,13 +904,81 @@ function updateBackgrounds() {
             });
         }
         
-        // Return early or continue if we want mixed modes (for now exclusive)
         return; 
-    } else {
+    } 
+    // Handle Ink Mode
+    else if (currentBgMode === 'ink') {
+        backgroundInkCanvas.classList.add('active');
+        backgroundSilkCanvas.classList.remove('active'); // Hide Silk
+        backgroundCausticsCanvas.classList.remove('active'); // Hide Caustics
+        silkBg.stop(); // Stop Silk
+        causticsBg.stop(); // Stop Caustics
+
+        backgroundBlur.classList.add('hidden-by-mode');
+        backgroundVideo.classList.add('hidden-by-mode');
+        inkBg.start();
+        
+        // Extract colors if we have an image
+        if (albumArt.src && albumArt.src !== window.location.href) {
+            getDominantColors(albumArt).then(colors => {
+                inkBg.updateColors(colors);
+            });
+        }
+        
+        return;
+    }
+    // Handle Caustics Mode
+    else if (currentBgMode === 'caustics') {
+        backgroundCausticsCanvas.classList.add('active');
+        backgroundSilkCanvas.classList.remove('active'); // Hide Silk
+        backgroundInkCanvas.classList.remove('active'); // Hide Ink
+        silkBg.stop(); // Stop Silk
+        inkBg.stop(); // Stop Ink
+
+        backgroundBlur.classList.add('hidden-by-mode');
+        backgroundVideo.classList.add('hidden-by-mode');
+        causticsBg.start();
+        
+        // Extract colors if we have an image
+        if (albumArt.src && albumArt.src !== window.location.href) {
+            getDominantColors(albumArt).then(colors => {
+                let overrideColor = null;
+                if (panelAdaptiveColorToggle.checked) {
+                    overrideColor = currentDominantColorRGB;
+                } else {
+                    // Use custom color if adaptive is disabled
+                    const hexColor = panelCustomColorPicker.value;
+                    let r = 255, g = 255, b = 255;
+                    if (hexColor.startsWith('#')) {
+                        const hex = hexColor.substring(1);
+                        if (hex.length === 3) {
+                            r = parseInt(hex[0] + hex[0], 16);
+                            g = parseInt(hex[1] + hex[1], 16);
+                            b = parseInt(hex[2] + hex[2], 16);
+                        } else if (hex.length === 6) {
+                            r = parseInt(hex.substring(0, 2), 16);
+                            g = parseInt(hex.substring(2, 4), 16);
+                            b = parseInt(hex.substring(4, 6), 16);
+                        }
+                    }
+                    overrideColor = { r, g, b };
+                }
+                causticsBg.updateColors(colors, overrideColor);
+            });
+        }
+        
+        return;
+    }
+    else {
         backgroundSilkCanvas.classList.remove('active');
+        backgroundInkCanvas.classList.remove('active');
+        backgroundCausticsCanvas.classList.remove('active');
+        silkBg.stop();
+        inkBg.stop();
+        causticsBg.stop();
+        
         backgroundBlur.classList.remove('hidden-by-mode');
         backgroundVideo.classList.remove('hidden-by-mode');
-        silkBg.stop();
     }
 
     if (useAlbumArtBg) {

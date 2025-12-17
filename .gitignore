@@ -16,6 +16,7 @@ out/
 .env.test.local
 .env.production.local
 .cursorrules
+CLAUDE.local.md
 
 # IDE and editor files
 .vscode/
