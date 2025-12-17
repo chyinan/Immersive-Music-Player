@@ -77,8 +77,8 @@
 
 ```bash
 # 克隆仓库
-git clone https://github.com/chyinan/Liquid-Glass-Music-Player-APP.git
-cd Liquid-Glass-Music-Player-APP
+git clone https://github.com/chyinan/Soundscape.git
+cd Soundscape
 
 # 安装前端依赖
 npm install
