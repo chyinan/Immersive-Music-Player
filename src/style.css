@@ -2032,7 +2032,8 @@ body.cover-mode #info-wrapper {
 /* --- Silk Background --- */
 #background-silk,
 #background-ink,
-#background-caustics {
+#background-caustics,
+#background-aurora {
     position: fixed;
     top: 0;
     left: 0;
@@ -2047,7 +2048,8 @@ body.cover-mode #info-wrapper {
 
 #background-silk.active,
 #background-ink.active,
-#background-caustics.active {
+#background-caustics.active,
+#background-aurora.active {
     opacity: 1;
 }
 

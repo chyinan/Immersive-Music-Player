@@ -10,6 +10,7 @@ import { franc } from 'franc';
 import { SilkBackground } from './silk-background.js';
 import { InkBackground } from './ink-background.js';
 import { CausticsBackground } from './caustics-background.js';
+import { AuroraBackground } from './aurora-background.js';
 import { getDominantColors } from './color-utils.js';
 
 // ===== DOM ELEMENTS =====
@@ -29,11 +30,13 @@ const backgroundVideo = document.getElementById('background-video');
 const backgroundSilkCanvas = document.getElementById('background-silk');
 const backgroundInkCanvas = document.getElementById('background-ink');
 const backgroundCausticsCanvas = document.getElementById('background-caustics');
+const backgroundAuroraCanvas = document.getElementById('background-aurora');
 const bgModeSelect = document.getElementById('bg-mode-select'); // NEW
 const bgModeContainer = document.getElementById('bg-mode-container'); // NEW
 const silkBg = new SilkBackground('background-silk'); // Initialize Silk BG
 const inkBg = new InkBackground('background-ink'); // Initialize Ink BG
 const causticsBg = new CausticsBackground('background-caustics'); // Initialize Caustics BG
+const auroraBg = new AuroraBackground('background-aurora'); // Initialize Aurora BG
 
 // Audio Player Elements
 const audioPlayer = document.getElementById('audioPlayer');
@@ -890,8 +893,10 @@ function updateBackgrounds() {
         backgroundSilkCanvas.classList.add('active');
         backgroundInkCanvas.classList.remove('active'); // Hide Ink
         backgroundCausticsCanvas.classList.remove('active'); // Hide Caustics
+        backgroundAuroraCanvas.classList.remove('active'); // Hide Aurora
         inkBg.stop(); // Stop Ink
         causticsBg.stop(); // Stop Caustics
+        auroraBg.stop(); // Stop Aurora
 
         backgroundBlur.classList.add('hidden-by-mode');
         backgroundVideo.classList.add('hidden-by-mode');
@@ -911,8 +916,10 @@ function updateBackgrounds() {
         backgroundInkCanvas.classList.add('active');
         backgroundSilkCanvas.classList.remove('active'); // Hide Silk
         backgroundCausticsCanvas.classList.remove('active'); // Hide Caustics
+        backgroundAuroraCanvas.classList.remove('active'); // Hide Aurora
         silkBg.stop(); // Stop Silk
         causticsBg.stop(); // Stop Caustics
+        auroraBg.stop(); // Stop Aurora
 
         backgroundBlur.classList.add('hidden-by-mode');
         backgroundVideo.classList.add('hidden-by-mode');
@@ -932,8 +939,10 @@ function updateBackgrounds() {
         backgroundCausticsCanvas.classList.add('active');
         backgroundSilkCanvas.classList.remove('active'); // Hide Silk
         backgroundInkCanvas.classList.remove('active'); // Hide Ink
+        backgroundAuroraCanvas.classList.remove('active'); // Hide Aurora
         silkBg.stop(); // Stop Silk
         inkBg.stop(); // Stop Ink
+        auroraBg.stop(); // Stop Aurora
 
         backgroundBlur.classList.add('hidden-by-mode');
         backgroundVideo.classList.add('hidden-by-mode');
@@ -969,13 +978,37 @@ function updateBackgrounds() {
         
         return;
     }
-    else {
+    // Handle Aurora Mode
+    else if (currentBgMode === 'aurora') {
+        backgroundAuroraCanvas.classList.add('active');
         backgroundSilkCanvas.classList.remove('active');
         backgroundInkCanvas.classList.remove('active');
         backgroundCausticsCanvas.classList.remove('active');
         silkBg.stop();
         inkBg.stop();
         causticsBg.stop();
+
+        backgroundBlur.classList.add('hidden-by-mode');
+        backgroundVideo.classList.add('hidden-by-mode');
+        auroraBg.start();
+        
+        if (albumArt.src && albumArt.src !== window.location.href) {
+            getDominantColors(albumArt).then(colors => {
+                auroraBg.updateColors(colors);
+            });
+        }
+        
+        return;
+    }
+    else {
+        backgroundSilkCanvas.classList.remove('active');
+        backgroundInkCanvas.classList.remove('active');
+        backgroundCausticsCanvas.classList.remove('active');
+        backgroundAuroraCanvas.classList.remove('active');
+        silkBg.stop();
+        inkBg.stop();
+        causticsBg.stop();
+        auroraBg.stop();
         
         backgroundBlur.classList.remove('hidden-by-mode');
         backgroundVideo.classList.remove('hidden-by-mode');
