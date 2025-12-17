@@ -9,6 +9,11 @@
 .word-char {
     position: relative;
     display: inline-block; /* Essential for transform/clip */
+    white-space: pre-wrap; /* 修复空格丢失问题 */
+    padding-bottom: 0.15em; /* 修复下行部被切断的问题 */
+    /* 修复逐字模式下 text-shadow 显示异常的问题 */
+    text-shadow: none !important; 
+    filter: var(--lyrics-filter-shadow, none);
     /* 默认状态：稍微暗淡 */
     color: rgba(255, 255, 255, 0.4); 
     /* 动态填充背景 */

@@ -199,10 +199,10 @@ body:has(#player-ui-glass.minimal-mode) #background-blur {
     justify-content: center;
     
     /* GPU优化 & 动画准备 */
-    will-change: left, opacity;
+    will-change: left, transform, opacity;
     backface-visibility: hidden;
-    /* Modified transition: animate 'left' instead of 'transform' for smoother layout shifts */
-    transition: left 0.8s cubic-bezier(0.33, 1, 0.68, 1), opacity 0.5s ease-in-out;
+    /* Modified transition: animate 'left' and 'transform' for smoother layout shifts */
+    transition: left 0.8s cubic-bezier(0.33, 1, 0.68, 1), transform 0.8s cubic-bezier(0.33, 1, 0.68, 1), opacity 0.5s ease-in-out;
 }
 
 /* 正常播放模式：保持居中（排除极简模式和封面模式） */
@@ -1129,6 +1129,13 @@ body.drag-over #player-wrapper {
 }
 
 body.lyrics-active #lyrics-container {
+    /* Fix for zoom: Anchor to center and use transform for offset */
+    left: 50%;
+    top: 50%;
+    right: auto;
+    width: 55vw;
+    transform: translate(-50%, -50%) translateX(25vw); /* 25vw moves it to the right */
+    
     opacity: var(--lyrics-global-alpha, 1);
     pointer-events: auto;
     /* Add delay to create a sequence: Player moves first -> Lyrics fade in */
@@ -1137,8 +1144,9 @@ body.lyrics-active #lyrics-container {
 
 /* NEW: When lyrics are active, move the entire player container to the left */
 body.lyrics-active .container {
-    left: calc(50% - 23vw);
-    transform: translate(-50%, -50%); /* 保持居中变换不变，避免 sub-pixel 导致字体模糊 */
+    left: 50%;
+    /* Use transform for offset to support correct zooming from center */
+    transform: translate(-50%, -50%) translateX(-23vw); 
 }
 
 /* NEW: Enlarge the player itself when lyrics are active to fill the red box */

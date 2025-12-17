@@ -1,8 +1,8 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
-  "productName": "immersive-music-player",
-  "version": "1.4.0",
-  "identifier": "com.chyinan.immersivemusicplayer",
+  "productName": "Soundscape",
+  "version": "2.0.0",
+  "identifier": "com.chyinan.soundscape",
   "build": {
     "frontendDist": "../dist",
     "devUrl": "http://localhost:5173",
@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "immersive-music-player",
+        "title": "聆境（Soundscape）",
         "width": 800,
         "height": 600,
         "resizable": true,

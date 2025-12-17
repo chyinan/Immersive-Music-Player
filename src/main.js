@@ -89,9 +89,16 @@ const customBgBtn = document.getElementById('custom-bg-btn');
 const customBgVideoBtn = document.getElementById('custom-bg-video-btn');
 const clearCustomBgBtn = document.getElementById('clear-custom-bg-btn');
 const customBgContainer = document.getElementById('custom-bg-container');
+const albumArtBgContainer = document.getElementById('album-art-bg-container');
 const albumArtBgToggle = document.getElementById('album-art-bg-toggle');
 const playerCardBgToggle = document.getElementById('player-card-bg-toggle');
+const panelAdaptiveColorToggle = document.getElementById('panel-adaptive-color-toggle');
+const panelCustomColorPicker = document.getElementById('panel-custom-color-picker');
+const panelAdaptiveColorContainer = document.getElementById('panel-adaptive-color-container');
+const panelCustomColorContainer = document.getElementById('panel-custom-color-container');
 const bgBlurRange = document.getElementById('bg-blur-range');
+const playerCardBgBlurRange = document.getElementById('player-card-bg-blur-range');
+const playerCardBgBlurContainer = document.getElementById('player-card-bg-blur-container');
 
 /**
  * Wrap ASCII/latin sequences with span.latin so他们使用英文字体
@@ -325,6 +332,12 @@ function applyLyricsTextShadow(isEnabled) {
         ? '0 2px 4px rgba(0, 0, 0, 0.8)' 
         : 'none';
     document.documentElement.style.setProperty('--lyrics-text-shadow', shadowStyle);
+
+    // NEW: Also set filter shadow for word-by-word lyrics (which use background-clip)
+    const filterStyle = isEnabled
+        ? 'drop-shadow(0 2px 4px rgba(0, 0, 0, 0.8))'
+        : 'none';
+    document.documentElement.style.setProperty('--lyrics-filter-shadow', filterStyle);
 }
 
 /**
@@ -354,6 +367,16 @@ function applyTextOpacity(value) {
 function applyBgBlur(value) {
     const radius = Math.max(0, Math.min(100, value));
     document.documentElement.style.setProperty('--bg-blur-radius', `${radius}px`);
+}
+
+/**
+ * Applies blur to the player card background (distortedBg).
+ * @param {number} value - The blur radius in pixels (0-100).
+ */
+function applyPlayerCardBgBlur(value) {
+    const radius = Math.max(0, Math.min(100, value));
+    // Apply filter directly to the distortedBg element
+    distortedBg.style.filter = `blur(${radius}px)`;
 }
 
 
@@ -578,6 +601,7 @@ function setupSettings() {
         bgModeSelect.addEventListener('change', (e) => {
             currentBgMode = e.target.value;
             localStorage.setItem('bgMode', currentBgMode);
+            updateBackgroundModeSettingsVisibility();
             updateBackgrounds();
         });
         
@@ -590,11 +614,33 @@ function setupSettings() {
         
         // Init custom select for it if needed
         setupCustomSelect(bgModeSelect);
+        
+        // Update visibility on initialization
+        updateBackgroundModeSettingsVisibility();
     }
 
     playerCardBgToggle.addEventListener('change', () => {
         const isEnabled = playerCardBgToggle.checked;
         localStorage.setItem('playerCardBgEnabled', isEnabled ? '1' : '0');
+        updatePanelSettingsVisibility(); // Update visibility of dependent settings
+        updateBackgrounds();
+    });
+
+    playerCardBgBlurRange.addEventListener('input', () => {
+        const value = parseInt(playerCardBgBlurRange.value, 10);
+        localStorage.setItem('playerCardBgBlur', value);
+        applyPlayerCardBgBlur(value);
+    });
+
+    panelAdaptiveColorToggle.addEventListener('change', () => {
+        const isEnabled = panelAdaptiveColorToggle.checked;
+        localStorage.setItem('panelAdaptiveColorEnabled', isEnabled ? '1' : '0');
+        updatePanelSettingsVisibility();
+        updateBackgrounds();
+    });
+
+    panelCustomColorPicker.addEventListener('input', () => {
+        localStorage.setItem('panelCustomColor', panelCustomColorPicker.value);
         updateBackgrounds();
     });
 
@@ -661,6 +707,22 @@ function setupSettings() {
     const savedPlayerCardBgEnabled = localStorage.getItem('playerCardBgEnabled') !== '0'; // Default to true
     playerCardBgToggle.checked = savedPlayerCardBgEnabled;
 
+    const savedPlayerCardBgBlur = parseInt(localStorage.getItem('playerCardBgBlur'), 10);
+    if (!isNaN(savedPlayerCardBgBlur)) {
+        playerCardBgBlurRange.value = savedPlayerCardBgBlur;
+        applyPlayerCardBgBlur(savedPlayerCardBgBlur);
+    } else {
+        playerCardBgBlurRange.value = 0; // Default no blur
+        applyPlayerCardBgBlur(0);
+    }
+
+    // Restore panel color settings
+    const savedPanelAdaptiveColorEnabled = localStorage.getItem('panelAdaptiveColorEnabled') !== '0'; // Default true
+    panelAdaptiveColorToggle.checked = savedPanelAdaptiveColorEnabled;
+
+    const savedPanelCustomColor = localStorage.getItem('panelCustomColor') || '#ffffff';
+    panelCustomColorPicker.value = savedPanelCustomColor;
+
     // Restore custom background (path only)
     const savedBgPath = localStorage.getItem('customBgPath');
     if (savedBgPath) {
@@ -668,6 +730,8 @@ function setupSettings() {
     }
     
     // Initial UI update for background controls
+    updatePanelSettingsVisibility();
+    updateBackgroundModeSettingsVisibility();
     updateBackgrounds();
     // 根据当前自适应/自定义选项立即应用文本颜色
     updateAdaptiveColors();
@@ -677,31 +741,138 @@ function setupSettings() {
  * CORE BACKGROUND LOGIC: Updates all background layers based on current settings.
  * This is the single source of truth for background changes.
  */
+function updatePanelSettingsVisibility() {
+    const isPanelBgEnabled = playerCardBgToggle.checked;
+    const isAdaptiveEnabled = panelAdaptiveColorToggle.checked;
+
+    // Show panel settings only if panel background is disabled
+    if (isPanelBgEnabled) {
+        panelAdaptiveColorContainer.classList.add('hidden');
+        panelCustomColorContainer.classList.add('hidden');
+        // Show blur settings when panel background is ENABLED
+        if (playerCardBgBlurContainer) playerCardBgBlurContainer.classList.remove('hidden');
+    } else {
+        panelAdaptiveColorContainer.classList.remove('hidden');
+        // Show custom color picker only if adaptive color is disabled
+        if (isAdaptiveEnabled) {
+            panelCustomColorContainer.classList.add('hidden');
+        } else {
+            panelCustomColorContainer.classList.remove('hidden');
+        }
+        // Hide blur settings when panel background is DISABLED
+        if (playerCardBgBlurContainer) playerCardBgBlurContainer.classList.add('hidden');
+    }
+}
+
+/**
+ * Updates the visibility of background-related settings based on the current background mode.
+ * In "silk" mode, album art background and custom background settings should be hidden.
+ */
+function updateBackgroundModeSettingsVisibility() {
+    const isSilkMode = currentBgMode === 'silk';
+    
+    if (isSilkMode) {
+        // Hide and disable album art background setting
+        if (albumArtBgContainer) {
+            albumArtBgContainer.classList.add('hidden');
+        }
+        if (albumArtBgToggle) {
+            albumArtBgToggle.disabled = true;
+        }
+        
+        // Hide and disable custom background setting
+        if (customBgContainer) {
+            customBgContainer.classList.add('hidden');
+        }
+        if (customBgBtn) {
+            customBgBtn.disabled = true;
+        }
+        if (customBgVideoBtn) {
+            customBgVideoBtn.disabled = true;
+        }
+        if (clearCustomBgBtn) {
+            clearCustomBgBtn.disabled = true;
+        }
+    } else {
+        // Show and enable album art background setting
+        if (albumArtBgContainer) {
+            albumArtBgContainer.classList.remove('hidden');
+        }
+        if (albumArtBgToggle) {
+            albumArtBgToggle.disabled = false;
+        }
+        
+        // Show and enable custom background setting
+        if (customBgContainer) {
+            customBgContainer.classList.remove('hidden');
+        }
+        if (customBgBtn) {
+            customBgBtn.disabled = false;
+        }
+        if (customBgVideoBtn) {
+            customBgVideoBtn.disabled = false;
+        }
+        if (clearCustomBgBtn) {
+            clearCustomBgBtn.disabled = false;
+        }
+    }
+}
+
 function updateBackgrounds() {
     const useAlbumArtBg = albumArtBgToggle.checked;
     const customBgPath = localStorage.getItem('customBgPath');
     const customBgVideoPath = localStorage.getItem('customBgVideoPath'); // NEW: Get video path
 
     // Rule 1: Control the custom background selector UI
-    customBgContainer.classList.toggle('disabled', useAlbumArtBg);
+    // Only apply this rule if not in silk mode (silk mode handles visibility separately)
+    if (currentBgMode !== 'silk') {
+        customBgContainer.classList.toggle('disabled', useAlbumArtBg);
+    }
 
     // Rule 2: Determine player's distorted background
     if (artworkUrl) {
         if (playerCardBgToggle.checked) {
             distortedBg.style.backgroundImage = `url(${artworkUrl})`;
             distortedBg.style.backgroundColor = '';
+            // Apply blur setting
+            const blurVal = parseInt(playerCardBgBlurRange.value, 10) || 0;
+            distortedBg.style.filter = `blur(${blurVal}px)`;
         } else {
             distortedBg.style.backgroundImage = 'none';
-            if (currentDominantColorRGB) {
-                const { r, g, b } = currentDominantColorRGB;
-                distortedBg.style.backgroundColor = `rgba(${r}, ${g}, ${b}, 0.8)`;
+            distortedBg.style.filter = 'none'; // Ensure no blur in color mode
+            
+            // Check if adaptive color is enabled
+            if (panelAdaptiveColorToggle.checked) {
+                if (currentDominantColorRGB) {
+                    const { r, g, b } = currentDominantColorRGB;
+                    distortedBg.style.backgroundColor = `rgba(${r}, ${g}, ${b}, 0.8)`;
+                } else {
+                    distortedBg.style.backgroundColor = 'rgba(100, 100, 100, 0.5)';
+                }
             } else {
-                distortedBg.style.backgroundColor = 'rgba(100, 100, 100, 0.5)';
+                // Use custom color
+                const hexColor = panelCustomColorPicker.value;
+                // Convert hex to rgba with 0.8 opacity
+                let r = 255, g = 255, b = 255;
+                if (hexColor.startsWith('#')) {
+                    const hex = hexColor.substring(1);
+                    if (hex.length === 3) {
+                        r = parseInt(hex[0] + hex[0], 16);
+                        g = parseInt(hex[1] + hex[1], 16);
+                        b = parseInt(hex[2] + hex[2], 16);
+                    } else if (hex.length === 6) {
+                        r = parseInt(hex.substring(0, 2), 16);
+                        g = parseInt(hex.substring(2, 4), 16);
+                        b = parseInt(hex.substring(4, 6), 16);
+                    }
+                }
+                distortedBg.style.backgroundColor = `rgba(${r}, ${g}, ${b}, 0.8)`;
             }
         }
     } else {
         distortedBg.style.backgroundImage = 'none';
         distortedBg.style.backgroundColor = '';
+        distortedBg.style.filter = 'none';
     }
 
     // Rule 3: Determine the main, bottom-layer background
@@ -1113,7 +1284,7 @@ async function importFolder() {
 }
 
 async function clearPlaylist() {
-    const confirmed = await ask('确定要清空播放列表吗？', { title: 'Immersive Music Player', kind: 'warning' });
+    const confirmed = await ask('确定要清空播放列表吗？', { title: '聆境（Soundscape）', kind: 'warning' });
     if (confirmed) {
         playlist = [];
         currentPlaylistIndex = -1;
@@ -1603,12 +1774,12 @@ function setupPlaylist() {
 
     // === Button Auto-Hide Events ===
     audioPlayer.addEventListener('play', () => {
-        startPlaylistBtnTimer();
+        // Only start lyrics animation
         loopLyricsAnimation();
     });
 
     audioPlayer.addEventListener('pause', () => {
-        handleButtonInteraction(); // Show button on pause
+        // Only stop lyrics animation, do not show playlist button
         cancelAnimationFrame(animationFrameId);
     });
 
@@ -1616,9 +1787,8 @@ function setupPlaylist() {
     playlistBtn.addEventListener('mousemove', handleButtonInteraction); // Extra safety
     
     playlistBtn.addEventListener('mouseleave', () => {
-        if (!audioPlayer.paused) {
-            startPlaylistBtnTimer();
-        }
+        // Always auto-hide when mouse leaves, regardless of playback state
+        startPlaylistBtnTimer();
     });
 }
 
@@ -1776,6 +1946,10 @@ window.addEventListener('keydown', (event) => {
                 }
                 break;
         case 'l':
+            // 只在播放器UI状态下启用快捷键L
+            if (playerWrapper.classList.contains('hidden')) {
+                break;
+            }
             // 在进入歌词模式前，如果极简/封面模式是激活的，则先退出
             if (playerUIGlass.classList.contains('minimal-mode') || document.body.classList.contains('cover-mode')) {
                 playerUIGlass.classList.remove('minimal-mode');
@@ -1787,6 +1961,10 @@ window.addEventListener('keydown', (event) => {
             toggleLyrics();
             break;
             case 'v':
+                // 只在播放器UI状态下启用快捷键V
+                if (playerWrapper.classList.contains('hidden')) {
+                    break;
+                }
                 // 在切换视图模式前，如果歌词模式处于激活状态，则强制先完全关闭歌词模式
                 if (lyricsDisplayMode !== 0) {
                     const metaRegex = /(作[词詞]|作曲|编曲|編曲|詞|曲|译|arranger|composer|lyricist|lyrics|ti|ar|al|by)/i;

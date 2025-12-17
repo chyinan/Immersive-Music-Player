@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Liquid Glass Player</title>
+    <title>聆境（Soundscape）</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
@@ -126,13 +126,26 @@
                 <option value="silk">流动丝绸</option>
             </select>
         </div>
-        <div class="setting-item">
+        <div class="setting-item" id="album-art-bg-container">
             <label for="album-art-bg-toggle">专辑封面背景:</label>
             <input type="checkbox" id="album-art-bg-toggle" checked>
         </div>
         <div class="setting-item">
             <label for="player-card-bg-toggle">面板封面背景:</label>
             <input type="checkbox" id="player-card-bg-toggle" checked>
+        </div>
+        <div class="setting-item" id="player-card-bg-blur-container">
+            <label for="player-card-bg-blur-range">面板背景模糊度:</label>
+            <input type="range" id="player-card-bg-blur-range" min="0" max="100" value="0">
+        </div>
+        <!-- NEW: Panel Color Settings -->
+        <div class="setting-item" id="panel-adaptive-color-container">
+            <label for="panel-adaptive-color-toggle">自适应面板颜色:</label>
+            <input type="checkbox" id="panel-adaptive-color-toggle" checked>
+        </div>
+        <div class="setting-item" id="panel-custom-color-container">
+            <label for="panel-custom-color-picker">自定义面板颜色:</label>
+            <input type="color" id="panel-custom-color-picker" value="#ffffff">
         </div>
         <div class="setting-item" id="custom-bg-container">
             <label>自定义背景:</label>
@@ -181,8 +194,8 @@
         
         <div class="file-select-container">
             
-            <h1>Immersive Music Player</h1>
-            <p>Enjoy your music with a beautiful glass interface.</p>
+            <h1>聆境</h1>
+            <p>聆听音乐，沉浸于境</p>
             <button class="custom-file-upload" id="loadBtn">
                 <i class="fas fa-cloud-upload-alt"></i> Select Audio File
             </button>

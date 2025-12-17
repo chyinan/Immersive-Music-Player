@@ -1,9 +1,11 @@
-# Immersive Music Player
+# 聆境（Soundscape）
 <p align="center">
   <img src="./app-icon.png" alt="App Icon" width="200"/>
 </p>
 
-一款跨平台的桌面音乐播放器，采用 **Rust / Tauri v2** 打造后端，前端使用原生 **HTML + CSS + JavaScript**，并配备精致的UI界面。应用能自动提取音频元数据与封面、实时转码为浏览器友好的立体声 WAV，并在界面中呈现动态模糊与色彩自适应。
+**聆境（Soundscape）** 是一款沉浸式跨平台桌面音乐播放器，采用 **Rust / Tauri v2** 打造后端，前端使用原生 **HTML + CSS + JavaScript**，并配备精致的UI界面。应用能自动提取音频元数据与封面、实时转码为浏览器友好的立体声 WAV，并在界面中呈现动态模糊与色彩自适应。
+
+聆听音乐，沉浸于境。让每一次播放都成为一次感官之旅。
 
 ### 界面预览
 
@@ -104,7 +106,7 @@ npm run tauri build
 ## 目录结构
 
 ```
-Immersive Music Player/
+聆境（Soundscape）/
 ├─ src/            # 前端源码
 │  ├─ main.js
 │  └─ style.css

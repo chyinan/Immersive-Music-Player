@@ -15,6 +15,7 @@ out/
 .env.development.local
 .env.test.local
 .env.production.local
+.cursorrules
 
 # IDE and editor files
 .vscode/
