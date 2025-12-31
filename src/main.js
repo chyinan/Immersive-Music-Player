@@ -2456,6 +2456,11 @@ function updateLyricElementPositions(isActive) {
 
 /**
  * Calculate and apply dynamic transforms for lyric positioning
+ * 
+ * FIX: Now positions lyrics so that each line's VISUAL CENTER (not top edge)
+ * aligns correctly. The current line's center is aligned to the container's 
+ * horizontal midline, making multi-line lyrics (original + translation) 
+ * appear properly centered.
  */
 function applyLyricTransforms() {
     const getLineByRelIdx = (idx) => lyricsLinesContainer.querySelector(`.lyrics-line[data-line-index="${idx}"]`);
@@ -2470,51 +2475,65 @@ function applyLyricTransforms() {
 
     const baseGap = parseFloat(getComputedStyle(document.documentElement).fontSize) * 2.0; 
 
-    // Set current line's position
-    line0.style.setProperty('--translate-y', '0px');
+    // FIX: Set current line's position so its visual center is at container center
+    // CSS has `top: 50%` which places the TOP edge at center.
+    // Visual center Y = translateY + offsetHeight/2 = 0 (container center)
+    // Therefore: translateY = -offsetHeight/2
+    // Additional vertical offset to visually balance the layout (positive = move down)
+    const visualBalanceOffset = 35; // px - adjusts for perceived vertical center
+    const line0CenterOffset = -line0.offsetHeight / 2 + visualBalanceOffset;
+    line0.style.setProperty('--translate-y', `${line0CenterOffset}px`);
     
-    // Calculate positions downwards
+    // Track the visual center position (relative to container center, where 0 = center)
+    let lastCenterY = visualBalanceOffset; // line0's center is slightly below container center
     let lastLine = line0;
-    let lastTranslateY = 0;
 
+    // Calculate positions downwards
     const line1 = getLineByRelIdx(1);
     if (line1) {
         const dynamicGap = baseGap + (lastLine.offsetHeight + line1.offsetHeight) * 0.15;
+        // Distance between visual centers of two lines
         const distance = (lastLine.offsetHeight / 2) * getScale(lastLine) + (line1.offsetHeight / 2) * getScale(line1) + dynamicGap;
-        const translateY = lastTranslateY + distance;
+        const centerY = lastCenterY + distance;
+        // Visual center Y = translateY + offsetHeight/2 = centerY
+        // Therefore: translateY = centerY - offsetHeight/2
+        const translateY = centerY - line1.offsetHeight / 2;
         line1.style.setProperty('--translate-y', `${translateY}px`);
 
         lastLine = line1;
-        lastTranslateY = translateY;
+        lastCenterY = centerY;
         
         const line2 = getLineByRelIdx(2);
         if (line2) {
             const dynamicGap2 = baseGap + (lastLine.offsetHeight + line2.offsetHeight) * 0.15;
             const distance2 = (lastLine.offsetHeight / 2) * getScale(lastLine) + (line2.offsetHeight / 2) * getScale(line2) + dynamicGap2;
-            const translateY2 = lastTranslateY + distance2;
+            const centerY2 = lastCenterY + distance2;
+            const translateY2 = centerY2 - line2.offsetHeight / 2;
             line2.style.setProperty('--translate-y', `${translateY2}px`);
         }
     }
 
     // Calculate positions upwards
     lastLine = line0;
-    lastTranslateY = 0;
+    lastCenterY = 0;
 
     const line_minus_1 = getLineByRelIdx(-1);
     if (line_minus_1) {
         const dynamicGap = baseGap + (lastLine.offsetHeight + line_minus_1.offsetHeight) * 0.15;
         const distance = (lastLine.offsetHeight / 2) * getScale(lastLine) + (line_minus_1.offsetHeight / 2) * getScale(line_minus_1) + dynamicGap;
-        const translateY = lastTranslateY - distance;
+        const centerY = lastCenterY - distance;
+        const translateY = centerY - line_minus_1.offsetHeight / 2;
         line_minus_1.style.setProperty('--translate-y', `${translateY}px`);
 
         lastLine = line_minus_1;
-        lastTranslateY = translateY;
+        lastCenterY = centerY;
 
         const line_minus_2 = getLineByRelIdx(-2);
         if (line_minus_2) {
             const dynamicGap2 = baseGap + (lastLine.offsetHeight + line_minus_2.offsetHeight) * 0.15;
             const distance2 = (lastLine.offsetHeight / 2) * getScale(lastLine) + (line_minus_2.offsetHeight / 2) * getScale(line_minus_2) + dynamicGap2;
-            const translateY2 = lastTranslateY - distance2;
+            const centerY2 = lastCenterY - distance2;
+            const translateY2 = centerY2 - line_minus_2.offsetHeight / 2;
             line_minus_2.style.setProperty('--translate-y', `${translateY2}px`);
         }
     }

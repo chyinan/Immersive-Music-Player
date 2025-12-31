@@ -657,7 +657,7 @@ input[type="file"] { display: none; }
     height: auto; /* 改为自适应，避免被压缩 */
     min-height: auto; /* 跟随内容高度，避免高分辨率下额外空高导致背景外溢 */
     max-height: none;
-    border-radius: 24px;
+    border-radius: 32px;
     overflow: hidden; /* 防止背景层溢出，确保与玻璃面板完美对齐 */
     border: 1px solid rgba(255, 255, 255, 0.6); /* NEW: uniform white outline to hide stubborn edges */
     transition: width 0.7s cubic-bezier(0.45, 0.05, 0.55, 0.95), 
@@ -693,7 +693,7 @@ input[type="file"] { display: none; }
     height: 100%;
     background-size: cover;
     background-position: center;
-    border-radius: 23px; /* 匹配玻璃面板的内圆角 */
+    border-radius: 31px; /* 匹配玻璃面板的内圆角 */
     z-index: 1;
     box-sizing: border-box;
     
@@ -716,7 +716,7 @@ input[type="file"] { display: none; }
     box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.25);
     backdrop-filter: blur(14px) saturate(1.8);
     -webkit-backdrop-filter: blur(14px) saturate(1.8);
-    border-radius: 23px; /* 修复：匹配父容器边框的内圆角 (24px - 1px) */
+    border-radius: 31px; /* 修复：匹配父容器边框的内圆角 (32px - 1px) */
     padding: 2rem 2rem 1.5rem;
     display: flex;
     flex-direction: column;
@@ -746,13 +746,13 @@ input[type="file"] { display: none; }
     aspect-ratio: 1/1;
     
     position: relative;
-    margin-top: 1rem;
+    margin-top: 1.6rem;
     margin-bottom: 1rem;
     display: flex;
     align-items: center;
     justify-content: center;
     background-color: rgba(0,0,0,0.2);
-    border-radius: 16px;
+    border-radius: 24px;
     flex-shrink: 0;
     transition: width 0.7s cubic-bezier(0.45, 0.05, 0.55, 0.95), height 0.7s cubic-bezier(0.45, 0.05, 0.55, 0.95);
 }
@@ -760,9 +760,10 @@ input[type="file"] { display: none; }
 #visual-container img {
     width: 100%;
     height: 100%;
-    border-radius: 16px;
+    border-radius: 24px;
     object-fit: cover;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    /* Uniform shadow on all sides for subtle 3D depth */
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.4), 0 0 8px rgba(0, 0, 0, 0.25);
 }
 
 #info-wrapper {
@@ -1156,7 +1157,7 @@ body.lyrics-active #player-wrapper {
     height: auto; /* 改为自适应，让底部不被压缩 */
     min-height: auto; /* 依内容高度，避免背景层撑开后溢出 */
     max-height: none; /* 移除上限，避免歌词模式压缩高度 */
-    border-radius: 24px; /* 强制保持原有的圆角 (虽然默认就是24px，这里显式声明以防万一) */
+    border-radius: 32px; /* 强制保持原有的圆角 */
     overflow: hidden; /* 保持与玻璃面板对齐，避免背景溢出 */
     transform: none; /* 移除 3D 变换以修复歌词模式下的字体模糊问题 */
 }
@@ -1169,7 +1170,7 @@ body.lyrics-active #player-ui-glass {
     background: rgba(255, 255, 255, 0.06);
     box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12);
     backdrop-filter: blur(16px) saturate(1.6) brightness(0.95);
-    border-radius: 23px; /* 强制保持原有的内圆角 (24px - 1px) */
+    border-radius: 31px; /* 强制保持原有的内圆角 (32px - 1px) */
 }
 
 /* --- Styling for Enlarged Player Content in Lyrics Mode --- */
@@ -1180,12 +1181,12 @@ body.lyrics-active #visual-container {
     /* height: clamp(350px, 30vw, 450px); */
     /* NEW: Responsive sizing */
     width: 100%;
-    max-width: 450px;
+    max-width: 520px;
     height: auto;
     aspect-ratio: 1/1;
     
-    margin-top: 2rem;
-    margin-bottom: 2rem;
+    margin-top: 1.6rem;
+    margin-bottom: 1rem;
 }
 
 /* Enlarge Info Text */
