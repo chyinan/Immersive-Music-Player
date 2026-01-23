@@ -38,8 +38,9 @@
     --lyrics-font-style-translation: normal; /* 默认译文字体样式 */
     
     /* NEW: Language-specific font variables */
+    /* 日文默认添加中文字体作为fallback，确保中日混合文本（如"作詞：ACAね"）显示一致 */
     --font-zh: 'Microsoft YaHei', sans-serif;
-    --font-ja: 'MS Mincho', sans-serif;
+    --font-ja: 'MS Mincho', 'Microsoft YaHei', sans-serif;
     --font-en: 'Inter', sans-serif;
 }
 
@@ -214,16 +215,17 @@ body:not(.lyrics-active):not(.cover-mode) .container:not(.minimal-active) {
 /* --- Minimal Mode Container Override --- */
 .container:has(#player-ui-glass.minimal-mode),
 .container.minimal-active {
-    max-width: 98vw; /* Allow more width for minimal mode */
-    width: 98vw; /* Full viewport width */
-    top: 55%; /* 极简模式下移 */
+    max-width: 90vw; /* 收窄容器宽度 */
+    width: 90vw;
+    top: 50%; /* 修复：极简模式也垂直居中 */
     transform: translate(-50%, -50%);
 }
 
 /* Backup for browsers that don't support :has() */
 .container.minimal-active {
-    max-width: 98vw !important;
-    width: 98vw !important;
+    max-width: 90vw !important;
+    width: 90vw !important;
+    top: 50% !important; /* 确保垂直居中 */
 }
 
 /* --- Initial File Upload Screen --- */
@@ -674,15 +676,14 @@ input[type="file"] { display: none; }
 
 /* Override wrapper constraints in minimal mode */
 #player-wrapper:has(#player-ui-glass.minimal-mode) {
-    max-width: none;
-    width: 90vw;
+    max-width: 85vw;
+    width: fit-content;
 }
 
 /* Backup for browsers that don't support :has() */
 #player-wrapper.minimal-active {
-    max-width: none !important;
-    width: 90vw !important;
-
+    max-width: 85vw !important;
+    width: fit-content !important;
 }
 
 #player-ui-distorted-bg {
@@ -985,6 +986,8 @@ input[type="file"] { display: none; }
 
 /* --- Minimal Mode Styles (New) --- */
 #player-ui-glass.minimal-mode {
+    --minimal-padding: 2rem; /* 统一的边距变量 */
+    
     background-color: rgba(255, 255, 255, 0.2);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
@@ -994,17 +997,25 @@ input[type="file"] { display: none; }
     border-radius: 25px;
     -webkit-border-radius: 25px;
     color: rgba(255, 255, 255, 0.6);
-    /* Retain essential layout properties from previous implementation */
+    
+    /* 布局：封面左侧，信息右侧 */
     flex-direction: row;
     align-items: center;
-    gap: 6rem;
-    padding: 4rem 8rem;
+    gap: 4rem;
+    
+    /* 使用统一边距：上下左使用padding，右侧稍大给文字区域 */
+    padding: var(--minimal-padding);
+    padding-right: 5rem;
+    
     width: fit-content;
-    min-width: 90vw;
-    max-width: none;
-    height: 60vh;
-    min-height: 500px;
-    max-height: 80vh;
+    min-width: auto;
+    max-width: 85vw;
+    
+    /* 高度自适应封面，而不是固定值 */
+    height: auto;
+    min-height: auto;
+    max-height: none;
+    
     position: relative;
     overflow: hidden;
 }
@@ -1022,10 +1033,11 @@ input[type="file"] { display: none; }
     display: none !important;
 }
 
-/* 确保专辑封面在高光上方 */
+/* 确保专辑封面在高光上方，并与面板圆角对齐 */
 #player-ui-glass.minimal-mode #visual-container img {
     position: relative;
     z-index: 2;
+    border-radius: 25px; /* 封面图片圆角与面板对齐 */
 }
 
 /* 极简模式下的更强烈流动效果 (CORRECTED SELECTOR) */
@@ -1034,12 +1046,14 @@ input[type="file"] { display: none; }
 }
 
 #player-ui-glass.minimal-mode #visual-container {
-    width: clamp(420px, 40vh, 520px); /* Responsive size based on viewport height */
-    height: clamp(420px, 40vh, 520px); /* Responsive size based on viewport height */
+    /* 封面尺寸：使用vh确保等比例缩放 */
+    width: clamp(380px, 45vh, 550px);
+    height: clamp(380px, 45vh, 550px);
     margin: 0;
     flex-shrink: 0;
-    position: relative; /* 确保伪元素正确定位 */
-    overflow: hidden; /* 确保高光不会溢出 */
+    position: relative;
+    overflow: hidden;
+    border-radius: 25px; /* 与面板圆角对齐 */
 }
 
 #player-ui-glass.minimal-mode #info-wrapper {
@@ -1295,11 +1309,29 @@ body.lyrics-active .progress-bar-container.simple {
     font-family: var(--font-zh);
 }
 
-.original-lyric:lang(ja) {
+.original-lyric:lang(ja),
+.translated-lyric:lang(ja) {
     font-family: var(--font-ja);
 }
 
-.original-lyric:lang(en) {
+.original-lyric:lang(en),
+.translated-lyric:lang(en) {
+    font-family: var(--font-en);
+}
+
+/* --- Cover Mode: Language-based font-family rules (higher specificity) --- */
+#cover-mode-lyrics .original-lyric:lang(zh-CN),
+#cover-mode-lyrics .translated-lyric:lang(zh-CN) {
+    font-family: var(--font-zh);
+}
+
+#cover-mode-lyrics .original-lyric:lang(ja),
+#cover-mode-lyrics .translated-lyric:lang(ja) {
+    font-family: var(--font-ja);
+}
+
+#cover-mode-lyrics .original-lyric:lang(en),
+#cover-mode-lyrics .translated-lyric:lang(en) {
     font-family: var(--font-en);
 }
 
@@ -2058,4 +2090,244 @@ body.cover-mode #info-wrapper {
 #background-blur.hidden-by-mode,
 #background-video.hidden-by-mode {
     opacity: 0 !important;
+}
+
+/* === 高分辨率显示屏适配 (2560x1600, 2K+, 16:10等) === */
+
+/* 针对宽度超过2000px的高分辨率显示器 */
+@media (min-width: 2000px) {
+    /* 增大播放器包装器的最大宽度 */
+    #player-wrapper {
+        width: 35vw;
+        max-width: 800px;
+    }
+    
+    /* 歌词模式下也增大 */
+    body.lyrics-active #player-wrapper {
+        width: 35vw;
+        max-width: 800px;
+    }
+    
+    /* 增大专辑封面的最大尺寸 */
+    #visual-container {
+        max-width: 550px;
+    }
+    
+    body.lyrics-active #visual-container {
+        max-width: 650px;
+    }
+    
+    /* 设置面板在高分辨率下稍微宽一点 */
+    .settings-panel {
+        width: 420px;
+    }
+    
+    /* 播放列表面板也适当加宽 */
+    .playlist-panel {
+        width: 380px;
+    }
+}
+
+/* 针对高度超过1400px的显示器（如1600px高度） */
+@media (min-height: 1400px) {
+    /* 增加歌词容器高度 */
+    #lyrics-lines {
+        height: 800px;
+    }
+    
+    /* 调整极简模式 - 高分辨率 */
+    #player-ui-glass.minimal-mode {
+        --minimal-padding: 2.5rem; /* 高分辨率下稍大的边距 */
+        gap: 5rem;
+        padding-right: 6rem;
+    }
+    
+    /* 极简模式下的封面尺寸 - 高分辨率 */
+    #player-ui-glass.minimal-mode #visual-container {
+        width: clamp(450px, 48vh, 620px);
+        height: clamp(450px, 48vh, 620px);
+    }
+    
+    /* 封面模式在高屏幕下更大 */
+    body.cover-mode #player-wrapper {
+        width: 65vmin;
+        height: 65vmin;
+    }
+    
+    /* 封面模式歌词字体增大 */
+    #cover-mode-lyrics .original-lyric {
+        font-size: 3.2rem;
+    }
+    
+    #cover-mode-lyrics .translated-lyric {
+        font-size: 2.4rem;
+    }
+    
+    #cover-mode-lyrics .original-lyric:only-child,
+    #cover-mode-lyrics .translated-lyric:only-child {
+        font-size: 3.6rem;
+    }
+}
+
+/* 针对超高分辨率（2K+）的综合适配 */
+@media (min-width: 2000px) and (min-height: 1200px) {
+    /* 增大歌词字体 */
+    .original-lyric {
+        font-size: 4.5rem;
+    }
+    
+    .translated-lyric {
+        font-size: 2.6rem;
+    }
+    
+    /* 歌词模式下的翻转样式也需要调整 */
+    body.lyrics-mode-bilingual-reversed .translated-lyric,
+    body.lyrics-mode-translation .translated-lyric,
+    body.lyrics-mode-text-only-reversed .translated-lyric {
+        font-size: 4.5rem;
+    }
+    
+    body.lyrics-mode-bilingual-reversed .original-lyric {
+        font-size: 2.6rem;
+    }
+    
+    /* 增大信息文字 */
+    .info-title {
+        font-size: 2.4rem;
+    }
+    
+    .info-artist {
+        font-size: 1.8rem;
+    }
+    
+    body.lyrics-active .info-title {
+        font-size: 2.4rem;
+    }
+    
+    body.lyrics-active .info-artist {
+        font-size: 1.8rem;
+    }
+    
+    /* 时间信息 */
+    #time-info {
+        font-size: 1.1rem;
+    }
+    
+    body.lyrics-active #time-info {
+        font-size: 1.1rem;
+    }
+    
+    /* 进度条加粗 */
+    .progress-bar-container.simple {
+        height: 7px;
+    }
+    
+    body.lyrics-active .progress-bar-container.simple {
+        height: 7px;
+    }
+    
+    /* 极简模式文字 */
+    #player-ui-glass.minimal-mode .info-title {
+        font-size: clamp(2.5rem, 4.5vw, 6rem);
+    }
+    
+    #player-ui-glass.minimal-mode .info-artist {
+        font-size: clamp(1.5rem, 3vw, 4rem);
+    }
+    
+    /* 玻璃面板最小高度增加 */
+    #player-ui-glass {
+        min-height: 550px;
+    }
+}
+
+/* 针对16:10宽高比的特别优化 (如2560x1600) */
+@media (min-aspect-ratio: 14/10) and (max-aspect-ratio: 17/10) and (min-width: 2000px) {
+    /* 16:10 显示器特有调整 - 利用更多垂直空间 */
+    .container {
+        max-height: 92vh;
+    }
+    
+    /* 歌词模式下的布局微调，利用更宽的空间 */
+    body.lyrics-active .container {
+        transform: translate(-50%, -50%) translateX(-22vw);
+    }
+    
+    body.lyrics-active #lyrics-container {
+        width: 54vw;
+        transform: translate(-50%, -50%) translateX(24vw);
+    }
+    
+    /* 歌词行间距调整 */
+    .lyrics-line {
+        gap: 0.6rem;
+    }
+}
+
+/* 针对4K及更高分辨率的适配 (3840x2160+) */
+@media (min-width: 3000px) {
+    #player-wrapper {
+        width: 28vw;
+        max-width: 1000px;
+    }
+    
+    body.lyrics-active #player-wrapper {
+        width: 28vw;
+        max-width: 1000px;
+    }
+    
+    #visual-container {
+        max-width: 700px;
+    }
+    
+    body.lyrics-active #visual-container {
+        max-width: 800px;
+    }
+    
+    .original-lyric {
+        font-size: 5.5rem;
+    }
+    
+    .translated-lyric {
+        font-size: 3.2rem;
+    }
+    
+    .info-title {
+        font-size: 3rem;
+    }
+    
+    .info-artist {
+        font-size: 2.2rem;
+    }
+    
+    #lyrics-lines {
+        height: 1000px;
+    }
+    
+    #player-ui-glass.minimal-mode {
+        --minimal-padding: 3rem; /* 4K下更大的边距 */
+        gap: 6rem;
+        padding-right: 8rem;
+    }
+    
+    #player-ui-glass.minimal-mode #visual-container {
+        width: clamp(500px, 45vh, 700px);
+        height: clamp(500px, 45vh, 700px);
+    }
+    
+    #player-ui-glass.minimal-mode .info-title {
+        font-size: clamp(3rem, 5vw, 7rem);
+    }
+    
+    #player-ui-glass.minimal-mode .info-artist {
+        font-size: clamp(2rem, 3.5vw, 5rem);
+    }
+    
+    .settings-panel {
+        width: 480px;
+    }
+    
+    .playlist-panel {
+        width: 420px;
+    }
 }

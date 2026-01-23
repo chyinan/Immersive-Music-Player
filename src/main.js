@@ -486,6 +486,12 @@ async function applyFontType(type, fontName) {
             
             // Apply the dynamic font
             document.documentElement.style.setProperty(`--font-${type}`, `'${dynamicFontName}'`);
+            
+            // 当设置中文字体时，如果用户没有专门设置日文字体，
+            // 则同步更新日文字体，确保中日混合文本（如"作詞：ACAね"）显示一致
+            if (type === 'zh' && !localStorage.getItem('font-ja')) {
+                document.documentElement.style.setProperty('--font-ja', `'${dynamicFontName}', 'MS Mincho', sans-serif`);
+            }
         } catch (error) {
             console.error(`Failed to load font ${fontName}:`, error);
             // Fallback to sans-serif
@@ -496,6 +502,11 @@ async function applyFontType(type, fontName) {
         localStorage.removeItem(storageKey);
         const defaultFont = type === 'interface' ? "'Inter', sans-serif" : 'sans-serif';
         document.documentElement.style.setProperty(`--font-${type}`, defaultFont);
+        
+        // 如果清除中文字体设置，同时检查日文字体是否需要恢复默认
+        if (type === 'zh' && !localStorage.getItem('font-ja')) {
+            document.documentElement.style.setProperty('--font-ja', "'MS Mincho', 'Microsoft YaHei', sans-serif");
+        }
     }
 }
 
