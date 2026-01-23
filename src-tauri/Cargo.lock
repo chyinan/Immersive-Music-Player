@@ -3,6 +3,30 @@
 version = 3
 
 [[package]]
+name = "Soundscape"
+version = "2.2.2"
+dependencies = [
+ "base64 0.22.1",
+ "dwrote",
+ "encoding_rs",
+ "ffmpeg-sidecar",
+ "font-kit",
+ "log",
+ "serde",
+ "serde_json",
+ "sys-locale",
+ "tauri",
+ "tauri-build",
+ "tauri-plugin-dialog",
+ "tauri-plugin-log",
+ "tauri-plugin-shell",
+ "tempfile",
+ "urlencoding",
+ "walkdir",
+ "windows 0.58.0",
+]
+
+[[package]]
 name = "addr2line"
 version = "0.24.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -100,30 +124,6 @@ name = "anyhow"
 version = "1.0.98"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e16d2d3311acee920a9eb8d33b8cbc1787ce4a264e85f964c2404b969bdcd487"
-
-[[package]]
-name = "app"
-version = "2.2.2"
-dependencies = [
- "base64 0.22.1",
- "dwrote",
- "encoding_rs",
- "ffmpeg-sidecar",
- "font-kit",
- "log",
- "serde",
- "serde_json",
- "sys-locale",
- "tauri",
- "tauri-build",
- "tauri-plugin-dialog",
- "tauri-plugin-log",
- "tauri-plugin-shell",
- "tempfile",
- "urlencoding",
- "walkdir",
- "windows 0.58.0",
-]
 
 [[package]]
 name = "arbitrary"

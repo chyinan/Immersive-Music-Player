@@ -1690,7 +1690,7 @@ body.cover-mode #player-wrapper {
     border-radius: 16px;
     overflow: hidden;
     border: none;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+    box-shadow: 0 12px 18px rgba(0,0,0,0.35);
 }
 
 body.cover-mode #player-ui-glass {
