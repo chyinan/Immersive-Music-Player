@@ -321,6 +321,9 @@ function applyLyricsBold(originalBold, translationBold) {
 function applyLyricsItalic(originalItalic, translationItalic) {
     document.documentElement.style.setProperty('--lyrics-font-style-original', originalItalic ? 'italic' : 'normal');
     document.documentElement.style.setProperty('--lyrics-font-style-translation', translationItalic ? 'italic' : 'normal');
+    // 斜体时增加字符间距，防止斜体字符右侧被截断
+    document.documentElement.style.setProperty('--lyrics-letter-spacing-original', originalItalic ? '0.09em' : 'normal');
+    document.documentElement.style.setProperty('--lyrics-letter-spacing-translation', translationItalic ? '0.09em' : 'normal');
 }
 
 /**
